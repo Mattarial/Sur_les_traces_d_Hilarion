@@ -11,7 +11,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--image", required=True,
 	help="path to input image containing ArUCo tag")
 ap.add_argument("-t", "--type", type=str,
-	default="DICT_ARUCO_ORIGINAL",
+	default="DICT_4X4_100",
 	help="type of ArUCo tag to detect")
 args = vars(ap.parse_args())
 
@@ -43,7 +43,7 @@ ARUCO_DICT = {
 # load the input image from disk and resize it
 print("[INFO] loading image...")
 image = cv2.imread(args["image"])
-image = imutils.resize(image, width=600)
+#image = imutils.resize(image, width=600)
 
 # verify that the supplied ArUCo tag exists and is supported by
 # OpenCV

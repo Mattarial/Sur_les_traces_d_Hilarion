@@ -1,43 +1,39 @@
 #!/usr/bin/env python
 
 # import the necessary packages
+import math
+
+import numpy as np
 from imutils.video import VideoStream
 import argparse
 import imutils
 import time
 import cv2
 import sys
+import os
+import glob
+
+
+def dotproduct(v1, v2):
+  return sum((a*b) for a, b in zip(v1, v2))
+
+def length(v):
+  return math.sqrt(dotproduct(v, v))
+
+def angle(v1, v2):
+	return math.acos(dotproduct(v1, v2) / (length(v1) * length(v2)))
 
 # construct the argument parser and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-t", "--type", type=str,
-	default="DICT_ARUCO_ORIGINAL",
+	default="DICT_4X4_100",
 	help="type of ArUCo tag to detect")
 args = vars(ap.parse_args())
 
 # define names of each possible ArUco tag OpenCV supports
 ARUCO_DICT = {
-	"DICT_4X4_50": cv2.aruco.DICT_4X4_50,
 	"DICT_4X4_100": cv2.aruco.DICT_4X4_100,
-	"DICT_4X4_250": cv2.aruco.DICT_4X4_250,
-	"DICT_4X4_1000": cv2.aruco.DICT_4X4_1000,
-	"DICT_5X5_50": cv2.aruco.DICT_5X5_50,
-	"DICT_5X5_100": cv2.aruco.DICT_5X5_100,
-	"DICT_5X5_250": cv2.aruco.DICT_5X5_250,
-	"DICT_5X5_1000": cv2.aruco.DICT_5X5_1000,
-	"DICT_6X6_50": cv2.aruco.DICT_6X6_50,
-	"DICT_6X6_100": cv2.aruco.DICT_6X6_100,
-	"DICT_6X6_250": cv2.aruco.DICT_6X6_250,
-	"DICT_6X6_1000": cv2.aruco.DICT_6X6_1000,
-	"DICT_7X7_50": cv2.aruco.DICT_7X7_50,
-	"DICT_7X7_100": cv2.aruco.DICT_7X7_100,
-	"DICT_7X7_250": cv2.aruco.DICT_7X7_250,
-	"DICT_7X7_1000": cv2.aruco.DICT_7X7_1000,
 	"DICT_ARUCO_ORIGINAL": cv2.aruco.DICT_ARUCO_ORIGINAL,
-#	"DICT_APRILTAG_16h5": cv2.aruco.DICT_APRILTAG_16h5,
-#	"DICT_APRILTAG_25h9": cv2.aruco.DICT_APRILTAG_25h9,
-#	"DICT_APRILTAG_36h10": cv2.aruco.DICT_APRILTAG_36h10,
-#	"DICT_APRILTAG_36h11": cv2.aruco.DICT_APRILTAG_36h11
 }
 
 # verify that the supplied ArUCo tag exists and is supported by
@@ -54,11 +50,14 @@ arucoParams = cv2.aruco.DetectorParameters_create()
 
 # initialize the video stream and allow the camera sensor to warm up
 print("[INFO] starting video stream...")
+
+# src is useful to modify the video input
 vs = VideoStream(src=0).start()
 time.sleep(2.0)
 
 # loop over the frames from the video stream
 while True:
+	time.sleep(0.05)
 	# grab the frame from the threaded video stream and resize it
 	# to have a maximum width of 600 pixels
 	frame = vs.read()
@@ -67,6 +66,7 @@ while True:
 	# detect ArUco markers in the input frame
 	(corners, ids, rejected) = cv2.aruco.detectMarkers(frame,
 		arucoDict, parameters=arucoParams)
+
 
 	# verify *at least* one ArUco marker was detected
 	if len(corners) > 0:
@@ -88,10 +88,18 @@ while True:
 			topLeft = (int(topLeft[0]), int(topLeft[1]))
 
 			# draw the bounding box of the ArUCo detection
-			cv2.line(frame, topLeft, topRight, (0, 255, 0), 2)
+			cv2.line(frame, topLeft, topRight, (255, 0, 0), 2)
 			cv2.line(frame, topRight, bottomRight, (0, 255, 0), 2)
 			cv2.line(frame, bottomRight, bottomLeft, (0, 255, 0), 2)
 			cv2.line(frame, bottomLeft, topLeft, (0, 255, 0), 2)
+
+			diag = np.array(bottomRight) - np.array(topLeft)
+			print("DIAG : ------->  ",diag)
+			y = [0,50]
+
+			finalAngle = angle(diag,y)*57,2958
+			print(finalAngle)
+
 
 			# compute and draw the center (x, y)-coordinates of the
 			# ArUco marker
@@ -100,7 +108,7 @@ while True:
 			cv2.circle(frame, (cX, cY), 4, (0, 0, 255), -1)
 
 			# draw the ArUco marker ID on the frame
-			cv2.putText(frame, str(markerID),
+			cv2.putText(frame, "ID : " + str(markerID),
 				(topLeft[0], topLeft[1] - 15),
 				cv2.FONT_HERSHEY_SIMPLEX,
 				0.5, (0, 255, 0), 2)
