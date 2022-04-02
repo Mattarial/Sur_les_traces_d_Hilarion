@@ -13,16 +13,6 @@ import sys
 import os
 import glob
 
-
-def dotproduct(v1, v2):
-  return sum((a*b) for a, b in zip(v1, v2))
-
-def length(v):
-  return math.sqrt(dotproduct(v, v))
-
-def angle(v1, v2):
-	return math.acos(dotproduct(v1, v2) / (length(v1) * length(v2)))
-
 # construct the argument parser and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-t", "--type", type=str,
@@ -48,6 +38,8 @@ print("[INFO] detecting '{}' tags...".format(args["type"]))
 arucoDict = cv2.aruco.Dictionary_get(ARUCO_DICT[args["type"]])
 arucoParams = cv2.aruco.DetectorParameters_create()
 
+lastPoint = (0,0)
+
 # initialize the video stream and allow the camera sensor to warm up
 print("[INFO] starting video stream...")
 
@@ -57,7 +49,7 @@ time.sleep(2.0)
 
 # loop over the frames from the video stream
 while True:
-	time.sleep(0.05)
+	time.sleep(0.1)
 	# grab the frame from the threaded video stream and resize it
 	# to have a maximum width of 600 pixels
 	frame = vs.read()
@@ -88,18 +80,16 @@ while True:
 			topLeft = (int(topLeft[0]), int(topLeft[1]))
 
 			# draw the bounding box of the ArUCo detection
-			cv2.line(frame, topLeft, topRight, (255, 0, 0), 2)
+			cv2.line(frame, topLeft, topRight, (0, 255, 0), 2)
 			cv2.line(frame, topRight, bottomRight, (0, 255, 0), 2)
 			cv2.line(frame, bottomRight, bottomLeft, (0, 255, 0), 2)
 			cv2.line(frame, bottomLeft, topLeft, (0, 255, 0), 2)
 
 			diag = np.array(bottomRight) - np.array(topLeft)
-			print("DIAG : ------->  ",diag)
-			y = [0,50]
 
-			finalAngle = angle(diag,y)*57,2958
-			print(finalAngle)
+			finalAngle,_ = math.atan2(diag[0],diag[1])*57,2958
 
+			#print("ROTATION -> ",finalAngle)
 
 			# compute and draw the center (x, y)-coordinates of the
 			# ArUco marker
@@ -112,6 +102,16 @@ while True:
 				(topLeft[0], topLeft[1] - 15),
 				cv2.FONT_HERSHEY_SIMPLEX,
 				0.5, (0, 255, 0), 2)
+
+			lpX, lpY = lastPoint
+			vectDist = np.array([cX,cY]) - np.array([lpX,lpY])
+
+			cv2.line(frame, (cX,cY), ( (cX + vectDist[0]) , (cY + vectDist[1]) ), (255, 0, 0), 2)
+
+			lastPoint = (cX,cY)
+
+
+
 
 	# show the output frame
 	cv2.imshow("Frame", frame)
