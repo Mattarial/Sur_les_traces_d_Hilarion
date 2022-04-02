@@ -25,16 +25,16 @@ if len(sys.argv) != 1:
     print(len(sys.argv))
     print_usage()
 
-tab_l =  [Laumio("192.168.1.21"),
+tab_l =  [Laumio("192.168.1.31"),
+          Laumio("192.168.1.25"),
+          Laumio("192.168.1.27"),
+          Laumio("192.168.1.30"),
           Laumio("192.168.1.23"),
           Laumio("192.168.1.24"),
-          Laumio("192.168.1.25"),
           Laumio("192.168.1.26"),
-          Laumio("192.168.1.27"),
           Laumio("192.168.1.28"),
-          Laumio("192.168.1.29"),
-          Laumio("192.168.1.30"),
-          Laumio("192.168.1.31")]
+          Laumio("192.168.1.21"),
+          Laumio("192.168.1.29")]
 
 for l in tab_l :
     l.fillColor(0,0,0)
