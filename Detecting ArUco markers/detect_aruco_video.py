@@ -110,6 +110,7 @@ while True:
 				(topLeft[0], topLeft[1] - 30),
 				cv2.FONT_HERSHEY_SIMPLEX,
 				0.5, (0, 255, 0), 2)
+
 			if markerID in lastPoint:
 				lpX, lpY = lastPoint.get(markerID)
 			else:
@@ -135,31 +136,20 @@ while True:
 					pole_centers.append(calcCenter(topLeft, bottomLeft))
 
 			coeff = 1.73
-			masks = []
-			i = 1
 			for center in pole_centers:
 				square_center = np.array([cX,cY])
 				np_center = np.array(center)
 				np_center = square_center + (np_center - square_center)*coeff
-				mask = cv2.circle(frame, (int(np_center[0]), int(np_center[1])), 1, (255, 0, 0), -1)
 
-				if np_center[0] <750 and np_center[1] < 1000 :
-					pixels = frame[int(np_center[0]),int(np_center[1])]
+				if np_center[1] <750 and np_center[0] < 1000 :
+					pixels = frame[int(np_center[1]),int(np_center[0])]
 				else:
 					pixels = [0, 0, 0]
 
-				if i == 4:
-					i = 1
-				else:
-					i += 1
-
-				#cv2.putText(frame, "test",
-				#			(int(np_center[0]), int(np_center[1])),
-				#			cv2.FONT_HERSHEY_SIMPLEX,
-				#			0.5, (int(pixels[0]), int(pixels[1]), int(pixels[2])), 2)
-
-
-
+				cv2.putText(frame, "test",
+							(int(np_center[0]), int(np_center[1])),
+							cv2.FONT_HERSHEY_SIMPLEX,
+							0.5, (int(pixels[0]), int(pixels[1]), int(pixels[2])), 2)
 
 	# show the output frame
 	cv2.imshow("Frame", frame)
