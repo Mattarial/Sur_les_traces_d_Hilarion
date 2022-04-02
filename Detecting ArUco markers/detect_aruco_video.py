@@ -49,7 +49,7 @@ lastPoint = {}
 print("[INFO] starting video stream...")
 
 # src is useful to modify the video input
-vs = VideoStream(src=0).start()
+vs = VideoStream(src=1).start()
 time.sleep(2.0)
 firstTime = True
 
@@ -136,6 +136,7 @@ while True:
 					pole_centers.append(calcCenter(topLeft, bottomLeft))
 
 			coeff = 1.73
+			i = 0
 			for center in pole_centers:
 				square_center = np.array([cX,cY])
 				np_center = np.array(center)
@@ -146,10 +147,28 @@ while True:
 				else:
 					pixels = [0, 0, 0]
 
-				cv2.putText(frame, "test",
-							(int(np_center[0]), int(np_center[1])),
+				match i:
+					case 0:
+						dir = "Nord"
+					case 1:
+						dir = "Sud"
+					case 2:
+						dir = "Est"
+					case 3:
+						dir = "Ouest"
+
+				new_coeff = 3
+				center_new = np.array(center)
+				new_center = square_center + (center_new - square_center) * new_coeff
+				cv2.putText(frame, dir,
+							(int(new_center[0]), int(new_center[1])),
 							cv2.FONT_HERSHEY_SIMPLEX,
 							0.5, (int(pixels[0]), int(pixels[1]), int(pixels[2])), 2)
+
+				if i == 3:
+					i = 0
+				else:
+					i+=1
 
 	# show the output frame
 	cv2.imshow("Frame", frame)
