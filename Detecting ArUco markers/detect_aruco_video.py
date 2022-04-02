@@ -13,6 +13,11 @@ import sys
 import os
 import glob
 
+def calcCenter(p1,p2):
+	tlx, tlY = p1
+	trx, trY = p2
+	return [(tlx + trx) / 2, (tlY + trY) / 2]
+
 # construct the argument parser and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-t", "--type", type=str,
@@ -38,7 +43,7 @@ print("[INFO] detecting '{}' tags...".format(args["type"]))
 arucoDict = cv2.aruco.Dictionary_get(ARUCO_DICT[args["type"]])
 arucoParams = cv2.aruco.DetectorParameters_create()
 
-lastPoint = (0,0)
+lastPoint = {}
 
 # initialize the video stream and allow the camera sensor to warm up
 print("[INFO] starting video stream...")
@@ -46,10 +51,11 @@ print("[INFO] starting video stream...")
 # src is useful to modify the video input
 vs = VideoStream(src=0).start()
 time.sleep(2.0)
+firstTime = True
 
 # loop over the frames from the video stream
 while True:
-	time.sleep(0.1)
+	time.sleep(0.08)
 	# grab the frame from the threaded video stream and resize it
 	# to have a maximum width of 600 pixels
 	frame = vs.read()
@@ -58,7 +64,6 @@ while True:
 	# detect ArUco markers in the input frame
 	(corners, ids, rejected) = cv2.aruco.detectMarkers(frame,
 		arucoDict, parameters=arucoParams)
-
 
 	# verify *at least* one ArUco marker was detected
 	if len(corners) > 0:
@@ -89,7 +94,10 @@ while True:
 
 			finalAngle,_ = math.atan2(diag[0],diag[1])*57,2958
 
-			#print("ROTATION -> ",finalAngle)
+			cv2.putText(frame, "Angle : " + str(int(finalAngle)),
+						(topLeft[0], topLeft[1] - 55),
+						cv2.FONT_HERSHEY_SIMPLEX,
+						0.5, (0, 255, 0), 2)
 
 			# compute and draw the center (x, y)-coordinates of the
 			# ArUco marker
@@ -99,16 +107,56 @@ while True:
 
 			# draw the ArUco marker ID on the frame
 			cv2.putText(frame, "ID : " + str(markerID),
-				(topLeft[0], topLeft[1] - 15),
+				(topLeft[0], topLeft[1] - 30),
 				cv2.FONT_HERSHEY_SIMPLEX,
 				0.5, (0, 255, 0), 2)
+			if markerID in lastPoint:
+				lpX, lpY = lastPoint.get(markerID)
+			else:
+				lastPoint[markerID] = (cX,cY)
+				lpX, lpY = lastPoint.get(markerID)
 
-			lpX, lpY = lastPoint
 			vectDist = np.array([cX,cY]) - np.array([lpX,lpY])
 
 			cv2.line(frame, (cX,cY), ( (cX + vectDist[0]) , (cY + vectDist[1]) ), (255, 0, 0), 2)
 
-			lastPoint = (cX,cY)
+			lastPoint[markerID] = (cX,cY)
+
+			poles = ["NORD","SUD","EST","OUEST"]
+			pole_centers = []
+			for pole in poles:
+				if(pole == "NORD"):
+					pole_centers.append(calcCenter(topLeft,topRight))
+				if (pole == "SUD"):
+					pole_centers.append(calcCenter(bottomLeft, bottomRight))
+				if (pole == "EST"):
+					pole_centers.append(calcCenter(bottomRight, topRight))
+				if (pole == "OUEST"):
+					pole_centers.append(calcCenter(topLeft, bottomLeft))
+
+			coeff = 1.73
+			masks = []
+			i = 1
+			for center in pole_centers:
+				square_center = np.array([cX,cY])
+				np_center = np.array(center)
+				np_center = square_center + (np_center - square_center)*coeff
+				mask = cv2.circle(frame, (int(np_center[0]), int(np_center[1])), 1, (255, 0, 0), -1)
+
+				if np_center[0] <750 and np_center[1] < 1000 :
+					pixels = frame[int(np_center[0]),int(np_center[1])]
+				else:
+					pixels = [0, 0, 0]
+
+				if i == 4:
+					i = 1
+				else:
+					i += 1
+
+				#cv2.putText(frame, "test",
+				#			(int(np_center[0]), int(np_center[1])),
+				#			cv2.FONT_HERSHEY_SIMPLEX,
+				#			0.5, (int(pixels[0]), int(pixels[1]), int(pixels[2])), 2)
 
 
 
