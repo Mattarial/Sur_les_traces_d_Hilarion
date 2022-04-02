@@ -18,38 +18,103 @@ def calcCenter(p1,p2):
 	trx, trY = p2
 	return [(tlx + trx) / 2, (tlY + trY) / 2]
 
-# construct the argument parser and parse the arguments
-ap = argparse.ArgumentParser()
-ap.add_argument("-t", "--type", type=str,
-	default="DICT_4X4_100",
-	help="type of ArUCo tag to detect")
-args = vars(ap.parse_args())
+def initCvFor4x4():
+	# construct the argument parser and parse the arguments
+	ap = argparse.ArgumentParser()
+	ap.add_argument("-t", "--type", type=str,
+					default="DICT_4X4_100",
+					help="type of ArUCo tag to detect")
+	args = vars(ap.parse_args())
 
-# define names of each possible ArUco tag OpenCV supports
-ARUCO_DICT = {
-	"DICT_4X4_100": cv2.aruco.DICT_4X4_100,
-	"DICT_ARUCO_ORIGINAL": cv2.aruco.DICT_ARUCO_ORIGINAL,
-}
+	# define names of each possible ArUco tag OpenCV supports
+	ARUCO_DICT = {
+		"DICT_4X4_100": cv2.aruco.DICT_4X4_100,
+		"DICT_ARUCO_ORIGINAL": cv2.aruco.DICT_ARUCO_ORIGINAL,
+	}
 
-# verify that the supplied ArUCo tag exists and is supported by
-# OpenCV
-if ARUCO_DICT.get(args["type"], None) is None:
-	print("[INFO] ArUCo tag of '{}' is not supported".format(
-		args["type"]))
-	sys.exit(0)
+	# verify that the supplied ArUCo tag exists and is supported by
+	# OpenCV
+	if ARUCO_DICT.get(args["type"], None) is None:
+		print("[INFO] ArUCo tag of '{}' is not supported".format(
+			args["type"]))
+		sys.exit(0)
 
-# load the ArUCo dictionary and grab the ArUCo parameters
-print("[INFO] detecting '{}' tags...".format(args["type"]))
-arucoDict = cv2.aruco.Dictionary_get(ARUCO_DICT[args["type"]])
-arucoParams = cv2.aruco.DetectorParameters_create()
+	# load the ArUCo dictionary and grab the ArUCo parameters
+	print("[INFO] detecting '{}' tags...".format(args["type"]))
+	arucoDict = cv2.aruco.Dictionary_get(ARUCO_DICT[args["type"]])
+	arucoParams = cv2.aruco.DetectorParameters_create()
+
+	return ap,args,arucoDict,arucoParams,ARUCO_DICT
+
+def getTops(markerCorner):
+	corners = markerCorner.reshape((4, 2))
+	(topLeft, topRight, bottomRight, bottomLeft) = corners
+
+	topRight = (int(topRight[0]), int(topRight[1]))
+	bottomRight = (int(bottomRight[0]), int(bottomRight[1]))
+	bottomLeft = (int(bottomLeft[0]), int(bottomLeft[1]))
+	topLeft = (int(topLeft[0]), int(topLeft[1]))
+
+	return topRight,topLeft,bottomRight,bottomLeft
+
+def drawRectangleOnAruco(frame,topRight,topLeft,bottomRight,bottomLeft,color):
+	cv2.line(frame, topLeft, topRight, color, 2)
+	cv2.line(frame, topRight, bottomRight, color, 2)
+	cv2.line(frame, bottomRight, bottomLeft, color, 2)
+	cv2.line(frame, bottomLeft, topLeft, color, 2)
+
+def getAngleFromCorner(markerCorner,id,dict):
+	topRight, topLeft, bottomRight, bottomLeft = getTops(markerCorner)
+	diag = np.array(bottomRight) - np.array(topLeft)
+	finalAngle, _ = math.atan2(diag[0], diag[1]) * 57, 2958
+
+	dict[markerID] = finalAngle
+
+	return dict
+
+def displayAngleOnAruco(frame,angleDict,topLeft):
+	cv2.putText(frame, "Angle : " + str(int(angleDict[markerID])),
+				(topLeft[0], topLeft[1] - 55),
+				cv2.FONT_HERSHEY_SIMPLEX,
+				0.5, (0, 255, 0), 2)
+
+def computeCenter(topLeft,bottomRight):
+	cX = int((topLeft[0] + bottomRight[0]) / 2.0)
+	cY = int((topLeft[1] + bottomRight[1]) / 2.0)
+
+	return cX,cY
+
+def drawId(frame,markerID,topLeft):
+	cv2.putText(frame, "ID : " + str(markerID),
+				(topLeft[0], topLeft[1] - 30),
+				cv2.FONT_HERSHEY_SIMPLEX,
+				0.5, (0, 255, 0), 2)
+
+def getDirection(markerID,lastPoint,dicoDist):
+	if markerID in lastPoint:
+		lpX, lpY = lastPoint.get(markerID)
+	else:
+		lastPoint[markerID] = (cX, cY)
+		lpX, lpY = lastPoint.get(markerID)
+
+	vectDist = np.array([cX, cY]) - np.array([lpX, lpY])
+
+	dicoDist[markerID] = vectDist
+
+	return dicoDist
+
+
+ap,args,arucoDict,arucoParams,ARUCO_DICT = initCvFor4x4()
 
 lastPoint = {}
+angleDict = {}
+dicoDist = {}
 
 # initialize the video stream and allow the camera sensor to warm up
 print("[INFO] starting video stream...")
 
 # src is useful to modify the video input
-vs = VideoStream(src=1).start()
+vs = VideoStream(src=0).start()
 time.sleep(2.0)
 firstTime = True
 
@@ -72,54 +137,24 @@ while True:
 
 		# loop over the detected ArUCo corners
 		for (markerCorner, markerID) in zip(corners, ids):
-			# extract the marker corners (which are always returned
-			# in top-left, top-right, bottom-right, and bottom-left
-			# order)
-			corners = markerCorner.reshape((4, 2))
-			(topLeft, topRight, bottomRight, bottomLeft) = corners
 
-			# convert each of the (x, y)-coordinate pairs to integers
-			topRight = (int(topRight[0]), int(topRight[1]))
-			bottomRight = (int(bottomRight[0]), int(bottomRight[1]))
-			bottomLeft = (int(bottomLeft[0]), int(bottomLeft[1]))
-			topLeft = (int(topLeft[0]), int(topLeft[1]))
+			topRight,topLeft,bottomRight,bottomLeft = getTops(markerCorner)
 
 			# draw the bounding box of the ArUCo detection
-			cv2.line(frame, topLeft, topRight, (0, 255, 0), 2)
-			cv2.line(frame, topRight, bottomRight, (0, 255, 0), 2)
-			cv2.line(frame, bottomRight, bottomLeft, (0, 255, 0), 2)
-			cv2.line(frame, bottomLeft, topLeft, (0, 255, 0), 2)
+			drawRectangleOnAruco(frame,topRight,topLeft,bottomRight,bottomLeft,(0, 255, 0))
 
-			diag = np.array(bottomRight) - np.array(topLeft)
+			angleDict = getAngleFromCorner(markerCorner,markerID,angleDict)
 
-			finalAngle,_ = math.atan2(diag[0],diag[1])*57,2958
+			displayAngleOnAruco(frame,angleDict,topLeft)
 
-			cv2.putText(frame, "Angle : " + str(int(finalAngle)),
-						(topLeft[0], topLeft[1] - 55),
-						cv2.FONT_HERSHEY_SIMPLEX,
-						0.5, (0, 255, 0), 2)
-
-			# compute and draw the center (x, y)-coordinates of the
-			# ArUco marker
-			cX = int((topLeft[0] + bottomRight[0]) / 2.0)
-			cY = int((topLeft[1] + bottomRight[1]) / 2.0)
+			cX,cY = computeCenter(topLeft,bottomRight)
 			cv2.circle(frame, (cX, cY), 4, (0, 0, 255), -1)
 
-			# draw the ArUco marker ID on the frame
-			cv2.putText(frame, "ID : " + str(markerID),
-				(topLeft[0], topLeft[1] - 30),
-				cv2.FONT_HERSHEY_SIMPLEX,
-				0.5, (0, 255, 0), 2)
+			drawId(frame,markerID,topLeft)
 
-			if markerID in lastPoint:
-				lpX, lpY = lastPoint.get(markerID)
-			else:
-				lastPoint[markerID] = (cX,cY)
-				lpX, lpY = lastPoint.get(markerID)
-
-			vectDist = np.array([cX,cY]) - np.array([lpX,lpY])
-
-			cv2.line(frame, (cX,cY), ( (cX + vectDist[0]) , (cY + vectDist[1]) ), (255, 0, 0), 2)
+			dicoDist = getDirection(markerID,lastPoint,dicoDist)
+			print(dicoDist)
+			cv2.line(frame, (cX,cY), ( (cX + dicoDist[markerID][0]) , (cY + dicoDist[markerID][1]) ), (255, 0, 0), 2)
 
 			lastPoint[markerID] = (cX,cY)
 
