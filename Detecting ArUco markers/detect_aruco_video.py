@@ -78,11 +78,13 @@ def displayAngleOnAruco(frame,angleDict,topLeft):
 				cv2.FONT_HERSHEY_SIMPLEX,
 				0.5, (0, 255, 0), 2)
 
-def computeCenter(topLeft,bottomRight):
+def computeCenters(markerID,topLeft,bottomRight,dico):
 	cX = int((topLeft[0] + bottomRight[0]) / 2.0)
 	cY = int((topLeft[1] + bottomRight[1]) / 2.0)
 
-	return cX,cY
+	dico[markerID] = (cX,cY)
+
+	return dico
 
 def drawId(frame,markerID,topLeft):
 	cv2.putText(frame, "ID : " + str(markerID),
@@ -103,12 +105,31 @@ def getDirection(markerID,lastPoint,dicoDist):
 
 	return dicoDist
 
+def drawDirection(frame,markerID,cX,cY,dicoDist,color):
+	cv2.line(frame, (cX, cY), ((cX + dicoDist[markerID][0]), (cY + dicoDist[markerID][1])), color, 2)
+
+def getPoleCenters(topRight,topLeft,bottomRight,bottomLeft):
+	poles = ["NORD", "SUD", "EST", "OUEST"]
+	pole_centers = []
+	for pole in poles:
+		if (pole == "NORD"):
+			pole_centers.append(calcCenter(topLeft, topRight))
+		if (pole == "SUD"):
+			pole_centers.append(calcCenter(bottomLeft, bottomRight))
+		if (pole == "EST"):
+			pole_centers.append(calcCenter(bottomRight, topRight))
+		if (pole == "OUEST"):
+			pole_centers.append(calcCenter(topLeft, bottomLeft))
+
+	return pole_centers
+
 
 ap,args,arucoDict,arucoParams,ARUCO_DICT = initCvFor4x4()
 
 lastPoint = {}
 angleDict = {}
 dicoDist = {}
+allCenters = {}
 
 # initialize the video stream and allow the camera sensor to warm up
 print("[INFO] starting video stream...")
@@ -147,28 +168,21 @@ while True:
 
 			displayAngleOnAruco(frame,angleDict,topLeft)
 
-			cX,cY = computeCenter(topLeft,bottomRight)
+			allCenters = computeCenters(markerID,topLeft,bottomRight,allCenters)
+			print(allCenters)
+			cX,cY = allCenters[markerID]
+
 			cv2.circle(frame, (cX, cY), 4, (0, 0, 255), -1)
 
 			drawId(frame,markerID,topLeft)
 
 			dicoDist = getDirection(markerID,lastPoint,dicoDist)
-			print(dicoDist)
-			cv2.line(frame, (cX,cY), ( (cX + dicoDist[markerID][0]) , (cY + dicoDist[markerID][1]) ), (255, 0, 0), 2)
+
+			drawDirection(frame,markerID,cX,cY,dicoDist,(255, 0, 0))
 
 			lastPoint[markerID] = (cX,cY)
 
-			poles = ["NORD","SUD","EST","OUEST"]
-			pole_centers = []
-			for pole in poles:
-				if(pole == "NORD"):
-					pole_centers.append(calcCenter(topLeft,topRight))
-				if (pole == "SUD"):
-					pole_centers.append(calcCenter(bottomLeft, bottomRight))
-				if (pole == "EST"):
-					pole_centers.append(calcCenter(bottomRight, topRight))
-				if (pole == "OUEST"):
-					pole_centers.append(calcCenter(topLeft, bottomLeft))
+			pole_centers = getPoleCenters(topRight,topLeft,bottomRight,bottomLeft)
 
 			coeff = 1.73
 			i = 0
