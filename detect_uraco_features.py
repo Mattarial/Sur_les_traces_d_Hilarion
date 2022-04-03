@@ -18,6 +18,37 @@ from aruco_4x4_100_utils import displayPoleColors, getAllPoleColors, getPoleCent
 
 ap,args,arucoDict,arucoParams,ARUCO_DICT = initCvFor4x4()
 
+from laumio import *
+
+tab_l =  [Laumio("192.168.1.31"),
+          Laumio("192.168.1.25"),
+          Laumio("192.168.1.27"),
+          Laumio("192.168.1.30"),
+          Laumio("192.168.1.23"),
+          Laumio("192.168.1.24"),
+          Laumio("192.168.1.26"),
+          Laumio("192.168.1.28"),
+          Laumio("192.168.1.21"),
+          Laumio("192.168.1.29")]
+
+
+def gradient(laumio: Laumio, o_r, o_g, o_b, val):
+	nouv = abs(val*255/180)
+	diff_r = abs(o_r-nouv)
+	diff_g = abs(o_g-nouv)
+	diff_b = abs(o_b-nouv)
+	temp_r = o_r
+	temp_g = o_g
+	temp_b = o_b
+
+	for i in range(0, 10):
+		temp_r -= diff_r * 0.1
+		temp_g -= diff_g * 0.1
+		temp_b -= diff_b * 0.1
+		laumio.fillColor(abs(int(temp_r)), abs(int(temp_g)), abs(int(temp_b)))
+
+	return [int(temp_r), int(temp_g), int(temp_b)]
+
 lastPoint = {}
 angleDict = {}
 dicoDist = {}
@@ -34,7 +65,6 @@ firstTime = True
 
 # loop over the frames from the video stream
 while True:
-	time.sleep(0.08)
 	# grab the frame from the threaded video stream and resize it
 	# to have a maximum width of 600 pixels
 	frame = vs.read()
@@ -52,12 +82,15 @@ while True:
 		# loop over the detected ArUCo corners
 		for (markerCorner, markerID) in zip(corners, ids):
 
+
 			topRight,topLeft,bottomRight,bottomLeft = getTops(markerCorner)
 
 			# draw the bounding box of the ArUCo detection
 			drawRectangleOnAruco(frame,topRight,topLeft,bottomRight,bottomLeft,(0, 255, 0))
 
 			angleDict = getAngleFromCorner(markerCorner,markerID,angleDict)
+
+			rotation = angleDict[markerID]
 
 			displayAngleOnAruco(frame,markerID,angleDict,topLeft)
 
@@ -78,8 +111,24 @@ while True:
 			pole_centers = getPoleCenters(topRight,topLeft,bottomRight,bottomLeft)
 
 			poleColorsDict = getAllPoleColors(frame,markerID,pole_centers,cX,cY,poleColorsDict)
+			poles = poleColorsDict[markerID]
 
-			displayPoleColors(markerID, frame, dir, cX, cY, poleColorsDict,pole_centers)
+			colorsNorth = poles["Nord"]
+			tab_l[2].fillColor(colorsNorth[0],colorsNorth[1],colorsNorth[2])
+
+			colorsNorth = poles["Sud"]
+			tab_l[4].fillColor(colorsNorth[0], colorsNorth[1], colorsNorth[2])
+
+			colorsNorth = poles["Est"]
+			tab_l[6].fillColor(colorsNorth[0], colorsNorth[1], colorsNorth[2])
+
+			colorsNorth = poles["Ouest"]
+			tab_l[8].fillColor(colorsNorth[0], colorsNorth[1], colorsNorth[2])
+
+			#gradient(tab_l[2], colorsNorth[0], colorsNorth[1], colorsNorth[2], rotation)
+			time.sleep(0.1)
+
+			#displayPoleColors(markerID, frame, dir, cX, cY, poleColorsDict,pole_centers)
 
 	# show the output frame
 	cv2.imshow("Frame", frame)

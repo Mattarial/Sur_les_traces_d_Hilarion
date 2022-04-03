@@ -6,6 +6,19 @@ import cv2
 import numpy as np
 
 
+from laumio import *
+tab_l =  [Laumio("192.168.1.31"),
+          Laumio("192.168.1.25"),
+          Laumio("192.168.1.27"),
+          Laumio("192.168.1.30"),
+          Laumio("192.168.1.23"),
+          Laumio("192.168.1.24"),
+          Laumio("192.168.1.26"),
+          Laumio("192.168.1.28"),
+          Laumio("192.168.1.21"),
+          Laumio("192.168.1.29")]
+
+
 def calcCenter(p1,p2):
 	tlx, tlY = p1
 	trx, trY = p2
@@ -151,6 +164,23 @@ def getAllPoleColors(frame,markerID,pole_centers,cX,cY,poleColorsDict):
 
 	return poleColorsDict
 
+def bgrToDiscreteColor(color):
+	b,g,r = color[0],color[1],color[2]
+	if b>=30 and b<=255 and g>=0 and g<=50 and r>=0 and r<=50:
+		finalColor = "B"
+	elif b >= 0 and b <= 90 and g >= 0 and g <= 90 and r >= 0 and r <= 255:
+		finalColor = "R"
+	elif b >= 0 and b <= 80 and g >= 0 and g <= 255 and r >= 0 and r <= 80:
+		finalColor = "G"
+	elif b >= 0 and b <= 80 and g >= 60 and g <= 220 and r >= 80 and r <= 255:
+		finalColor = "Y"
+	elif b >= 90 and b <= 255 and g >= 90 and g <= 255 and r >= 90 and r <= 255:
+		finalColor = "W"
+	else:
+		finalColor = "U"
+
+	return finalColor
+
 def displayPoleColors(markerID, frame, dir,cX,cY ,poleColorsDict,pole_centers):
 	for pole,pixels in poleColorsDict[markerID].items():
 		match pole:
@@ -171,3 +201,4 @@ def displayPoleColors(markerID, frame, dir,cX,cY ,poleColorsDict,pole_centers):
 					(int(new_center[0]), int(new_center[1])),
 					cv2.FONT_HERSHEY_SIMPLEX,
 					0.5, (int(pixels[0]), int(pixels[1]), int(pixels[2])), 2)
+
