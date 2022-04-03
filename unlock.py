@@ -5,6 +5,9 @@ Created on Sat Apr  2 23:18:08 2022
 @author: alexa
 """
 
+import aruco_4x4_100_utils.py
+import time
+
 def compareLists(L1, L2):
     res = True;
     for i in range(4):
@@ -14,9 +17,11 @@ def compareLists(L1, L2):
 
 
 def unlock(id1, angle1, L):
+    
     locked = True
     keyAngleState = 0  #1 : wrong angle
     keyColorState = False;
+    
     while(locked):
         time.sleep(0,08)
         
@@ -29,21 +34,27 @@ def unlock(id1, angle1, L):
         if len(corners) > 0:
             ids = ids.flatten()
             for (markerCorner, markerID) in zip(corners, ids):    
-                corners = markerCorner.reshape((4, 2))
+                """corners = markerCorner.reshape((4, 2))
     			(topLeft, topRight, bottomRight, bottomLeft) = corners
                 #topRight = (int(topRight[0]), int(topRight[1]))
     			bottomRight = (int(bottomRight[0]), int(bottomRight[1]))
     			#bottomLeft = (int(bottomLeft[0]), int(bottomLeft[1]))
     			topLeft = (int(topLeft[0]), int(topLeft[1]))
                 diag = np.array(bottomRight) - np.array(topLeft)
-                finalAngle,_ = math.atan2(diag[0],diag[1])*57,2958
+                finalAngle,_ = math.atan2(diag[0],diag[1])*57,2958"""
                 
-                if int(finalAngle) < 0:
-                    temp=180+int(finalAngle)
-                    angle=180+temp
-                
-                 #angle unlock state check
                 if markerID==id1: #sur la clé d'angle
+                
+                    dictAngle = {}
+                    dictAngle = getAngleFromCorner(markerCorner, markerID, dictAngle)
+                    finalAngle = dictAngle[markerID]
+                    
+                    if int(finalAngle) < 0:
+                        temp=180+int(finalAngle)
+                        angle=180+temp
+                    
+                     #angle unlock state check
+                
                     if angle1 + angle < 10 or angle1 - angle < 10:
                         keyAngleState = 3 #angle unlocked
                     elif 10 <= angle1 + angle < 30 or 10 <= angle1 - angle < 30:
