@@ -117,20 +117,19 @@ laumio_diag = [Laumio("192.168.1.24"),
                Laumio("192.168.1.31")]
 
 
-
+"""
 def compareLists(L1, L2):
     res = True
     for i in range(4):
         if L1[i]!=L2[i]:
             res = False
     return res
-
+"""
         #Fonction unlock
 def unlock(id1, angle1, L):
     
     locked = True
     keyAngleState = 0  #1 : wrong angle
-    keyColorState = False
     
     while(locked):
         time.sleep(0.08)
@@ -172,7 +171,7 @@ def unlock(id1, angle1, L):
                     elif 30 <= angle1 + angle < 90 or 30 <= angle1 - angle < 90:
                         keyAngleState = 1
                     angleLockLights(keyAngleState) #change la cadence de clignotement des lampes
-                                          
+                """                           
                 #color unlock state check
                 colors = detectColors(markerID)  #renvoie une liste de 4 lettres
                 if compareLists(L, colors):
@@ -181,7 +180,9 @@ def unlock(id1, angle1, L):
                 #global unlock state check
                 if keyColorState and keyAngleState == 3 :
                     locked = False
-                    break
+                    break"""
+                if(keyAngleState == 3):
+                    locked = False
 #FIN fonction unlock
 
 #Origine avec API
@@ -257,12 +258,17 @@ def check_around():
 # Determination vitesse
 def get_speed(pos1, pos2):
     distance = abs(pos2-pos1)
-    frame_time = 1 # AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+    frame_time = 1 # AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
     vitesse = distance/frame_time
 
 
 
 # FIN deter vitesse
+
+
+
+
+
 
 
 def Victoire():
@@ -327,12 +333,12 @@ Saisir deplacement : ")
 
 
         case "case_verrou" :
-            for i in range(0,2) :
+            """for i in range(0,2) :
                 laumio_up[i].fillColor(255, 255, 0) #jaune
             for i in range(0,2) :
                  laumio_down[i].fillColor(255, 255, 255) #blanc
             laumio_left.fillColor(255, 0, 0) #rouge
-            laumio_right.fillColor(0, 255, 0) #vert
+            laumio_right.fillColor(0, 255, 0) #vert"""
 
             # Appel fonction
             unlock(id_cle_angle, cle_angle, cle_couleur)
