@@ -23,7 +23,7 @@ def unlock(id1, angle1, L):
     keyColorState = False;
     
     while(locked):
-        time.sleep(0,08)
+        time.sleep(0.08)
         
         frame = vs.read()
     	frame = imutils.resize(frame, width=1000)
