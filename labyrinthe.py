@@ -1,13 +1,15 @@
+from logging.config import dictConfig
 from re import A
 import sys
 import os
 import time
+from detect_uraco_features import ARUCO_DICT
 
 import laumio
-import aruco_4x4_100_utils.py
 
 sys.path.append(os.path.dirname(sys.argv[0])+'/../')
 from laumio import *
+from aruco_4x4_100_utils import *
 
 def print_usage():
     print(
@@ -82,6 +84,10 @@ class case_border :
     diag_r = 0
     diag_g = 0
     diag_b = 0
+
+PLAYER_PAD_ID = 22
+
+CM_TO_PX = 38
 
 map = [[case_border,       case_border,    case_border,    case_border,     case_border,        case_border],
        [case_border,       case_normale,   case_instable,  case_normale,    case_mur,           case_border],
@@ -185,12 +191,8 @@ def unlock(id1, angle1, L):
                     locked = False
 #FIN fonction unlock
 
-#Origine avec API
-get_pos =[400,50] #AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-ORIGINE_ABSOLUE = [get_pos[0] - 30, get_pos[1] - 10]
 
-
-        # Fonction de clignotement
+# Fonction de clignotement
 def clignotte(l1, l2, l3, l4, dodo) :
     # Clignotement en jaune
     temp_r = 0
@@ -267,6 +269,18 @@ def get_speed(pos1, pos2):
 
 
 
+def case_actuelle(ORIGINE_ABSOLUE, pX, pY) :
+    
+    UNE_CASE = 20*CM_TO_PX
+
+    deltaX = pX - ORIGINE_ABSOLUE[0]
+    deltaY = pY - ORIGINE_ABSOLUE[1]
+
+    nbCasesX = deltaX % UNE_CASE
+    nbCasesY = deltaY % UNE_CASE
+
+    return [nbCasesX,nbCasesY]
+
 
 
 
@@ -292,67 +306,84 @@ for l in tab_l :
 pos = [2,1]
 score = 10
 game_over = False
+dicoPlayerPad = {}
 
+_,_,arucoDict,arucoParams,ARUCO_DICT = initCvFor4x4()
+
+(corners, ids, rejected) = cv2.aruco.detectMarkers(frame,
+    		arucoDict, parameters=arucoParams)
+
+#Origine avec API
 while(pos != [5,3] and game_over != True) :
+    if(len(corners) > 0) :
+        ids = ids.flatten()
+        for (markerCorner, markerID) in zip(corners, ids):
+            
+            topRight,topLeft,bottomRight,bottomLeft = getTops(markerCorner)
 
-    check_around()
+            dicoPlayerPad = computeCenters(markerID,topLeft,bottomRight,dicoPlayerPad)
 
-    choix_movement = input("1 - Up\n\
-2 - Down\n\
-3 - Left\n\
-4 - Right\n\
-Saisir deplacement : ")
+            cX,cY = dicoPlayerPad[PLAYER_PAD_ID]
 
-    match(choix_movement) :
-        case "1" :
-            pos = [pos[0] - 1,pos[1]]
-        case "2" :
-            pos = [pos[0] + 1,pos[1]]
-        case "3" :
-            pos = [pos[0],pos[1] - 1]
-        case "4" :
-            pos = [pos[0],pos[1] + 1]
+            ORIGINE_ABSOLUE = [cX - 50 * CM_TO_PX, cY - 30 * CM_TO_PX]
 
-    match(map[pos[0]][pos[1]].__name__) :
-        case "case_mur" :
-            score -= 1
+            pos = case_actuelle(ORIGINE_ABSOLUE,cX,cY)
 
-
-
-        case "case_instable" :
-            print("ok")
-            # fonction get position
-           # pos1 = get_position
-            #pos2 = get_position
-
-        case "case_lente" :
-            print("ok")
-
-
-
-
-
-        case "case_verrou" :
-            """for i in range(0,2) :
-                laumio_up[i].fillColor(255, 255, 0) #jaune
-            for i in range(0,2) :
-                 laumio_down[i].fillColor(255, 255, 255) #blanc
-            laumio_left.fillColor(255, 0, 0) #rouge
-            laumio_right.fillColor(0, 255, 0) #vert"""
-
-            # Appel fonction
-            unlock(id_cle_angle, cle_angle, cle_couleur)
             check_around()
 
-        case "case_border" :
-            game_over = True
-            score = 0
-    print("\n",score)
+            """choix_movement = input("1 - Up\n\
+        2 - Down\n\
+        3 - Left\n\
+        4 - Right\n\
+        Saisir deplacement : ")
+
+            match(choix_movement) :
+                case "1" :
+                    pos = [pos[0] - 1,pos[1]]
+                case "2" :
+                    pos = [pos[0] + 1,pos[1]]
+                case "3" :
+                    pos = [pos[0],pos[1] - 1]
+                case "4" :
+                    pos = [pos[0],pos[1] + 1]"""
+
+            match(map[pos[0]][pos[1]].__name__) :
+                case "case_mur" :
+                    score -= 1
 
 
 
-    if (game_over != True) :
-        Victoire()
+                case "case_instable" :
+                    print("ok")
+                    # fonction get position
+                # pos1 = get_position
+                    #pos2 = get_position
 
-    else :
-        Defaite()
+                case "case_lente" :
+                    print("ok")
+
+
+                case "case_verrou" :
+                    """for i in range(0,2) :
+                        laumio_up[i].fillColor(255, 255, 0) #jaune
+                    for i in range(0,2) :
+                        laumio_down[i].fillColor(255, 255, 255) #blanc
+                    laumio_left.fillColor(255, 0, 0) #rouge
+                    laumio_right.fillColor(0, 255, 0) #vert"""
+
+                    # Appel fonction
+                    unlock(id_cle_angle, cle_angle, cle_couleur)
+                    check_around()
+
+                case "case_border" :
+                    game_over = True
+                    score = 0
+            print("\n",score)
+            if(score == 0) :
+                game_over = True
+
+if (game_over != True) :
+    Victoire()
+
+else :
+    Defaite()
