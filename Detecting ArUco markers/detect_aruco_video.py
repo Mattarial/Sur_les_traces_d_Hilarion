@@ -123,6 +123,61 @@ def getPoleCenters(topRight,topLeft,bottomRight,bottomLeft):
 
 	return pole_centers
 
+def getAllPoleColors(markerID,pole_centers,cX,cY,poleColorsDict):
+	coeff = 1.73
+	colorsByPole = {}
+	i = 0
+	for center in pole_centers:
+		square_center = np.array([cX, cY])
+		np_center = np.array(center)
+		np_center = square_center + (np_center - square_center) * coeff
+
+		if np_center[1] < 750 and np_center[0] < 1000:
+			pixels = frame[int(np_center[1]), int(np_center[0])]
+		else:
+			pixels = [0, 0, 0]
+
+		match i:
+			case 0:
+				direction = "Nord"
+			case 1:
+				direction = "Sud"
+			case 2:
+				direction = "Est"
+			case 3:
+				direction = "Ouest"
+
+		colorsByPole[direction] = pixels
+
+		if i == 3:
+			i = 0
+		else :
+			i += 1
+
+	poleColorsDict[markerID] = colorsByPole
+
+	return poleColorsDict
+
+def displayPoleColors(markerID, frame, dir,cX,cY ,poleColorsDict,pole_centers):
+	for pole,pixels in poleColorsDict[markerID].items():
+		match pole:
+			case "Nord":
+				num = 0
+			case "Sud":
+				num = 1
+			case "Est":
+				num = 2
+			case "Ouest":
+				num = 3
+		square_center = np.array([cX, cY])
+		new_coeff = 3
+		center_new = np.array(pole_centers[num])
+		new_center = square_center + (center_new - square_center) * new_coeff
+
+		cv2.putText(frame, pole,
+					(int(new_center[0]), int(new_center[1])),
+					cv2.FONT_HERSHEY_SIMPLEX,
+					0.5, (int(pixels[0]), int(pixels[1]), int(pixels[2])), 2)
 
 ap,args,arucoDict,arucoParams,ARUCO_DICT = initCvFor4x4()
 
@@ -130,6 +185,7 @@ lastPoint = {}
 angleDict = {}
 dicoDist = {}
 allCenters = {}
+poleColorsDict = {}
 
 # initialize the video stream and allow the camera sensor to warm up
 print("[INFO] starting video stream...")
@@ -169,7 +225,7 @@ while True:
 			displayAngleOnAruco(frame,angleDict,topLeft)
 
 			allCenters = computeCenters(markerID,topLeft,bottomRight,allCenters)
-			print(allCenters)
+
 			cX,cY = allCenters[markerID]
 
 			cv2.circle(frame, (cX, cY), 4, (0, 0, 255), -1)
@@ -184,40 +240,9 @@ while True:
 
 			pole_centers = getPoleCenters(topRight,topLeft,bottomRight,bottomLeft)
 
-			coeff = 1.73
-			i = 0
-			for center in pole_centers:
-				square_center = np.array([cX,cY])
-				np_center = np.array(center)
-				np_center = square_center + (np_center - square_center)*coeff
+			poleColorsDict = getAllPoleColors(markerID,pole_centers,cX,cY,poleColorsDict)
 
-				if np_center[1] <750 and np_center[0] < 1000 :
-					pixels = frame[int(np_center[1]),int(np_center[0])]
-				else:
-					pixels = [0, 0, 0]
-
-				match i:
-					case 0:
-						dir = "Nord"
-					case 1:
-						dir = "Sud"
-					case 2:
-						dir = "Est"
-					case 3:
-						dir = "Ouest"
-
-				new_coeff = 3
-				center_new = np.array(center)
-				new_center = square_center + (center_new - square_center) * new_coeff
-				cv2.putText(frame, dir,
-							(int(new_center[0]), int(new_center[1])),
-							cv2.FONT_HERSHEY_SIMPLEX,
-							0.5, (int(pixels[0]), int(pixels[1]), int(pixels[2])), 2)
-
-				if i == 3:
-					i = 0
-				else:
-					i+=1
+			displayPoleColors(markerID, frame, dir, cX, cY, poleColorsDict,pole_centers)
 
 	# show the output frame
 	cv2.imshow("Frame", frame)
